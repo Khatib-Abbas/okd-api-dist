@@ -116,21 +116,35 @@ ENV SYMFONY_PHPUNIT_VERSION=9
 ENTRYPOINT ["docker-entrypoint"]
 CMD ["php-fpm"]
 
-# "caddy" stage
-# depends on the "php" stage above
-FROM caddy:${CADDY_VERSION}-builder-alpine AS api_platform_caddy_builder
-
-# install Mercure and Vulcain modules
-RUN xcaddy build \
-    --with github.com/dunglas/mercure \
-    --with github.com/dunglas/mercure/caddy \
-    --with github.com/dunglas/vulcain \
-    --with github.com/dunglas/vulcain/caddy
-
-FROM caddy:${CADDY_VERSION} AS api_platform_caddy
+# "php"
+FROM nginx:latest AS api_platform_web
 
 WORKDIR /srv/api
-
-COPY --from=api_platform_caddy_builder /usr/bin/caddy /usr/bin/caddy
 COPY --from=api_platform_php /srv/api/public public/
-COPY docker/caddy/Caddyfile /etc/caddy/Caddyfile
+
+COPY docker/nginx/conf.d/default.conf.template /etc/nginx/conf.d/default.conf.template
+
+COPY docker/nginx/docker-entrypoint.sh /usr/local/bin/docker-entrypoint
+RUN chmod +x /usr/local/bin/docker-entrypoint
+
+ENTRYPOINT ["docker-entrypoint"]
+CMD ["nginx", "-g", "daemon off;"]
+
+## "caddy" stage
+## depends on the "php" stage above
+#FROM caddy:${CADDY_VERSION}-builder-alpine AS api_platform_caddy_builder
+#
+## install Mercure and Vulcain modules
+#RUN xcaddy build \
+#    --with github.com/dunglas/mercure \
+#    --with github.com/dunglas/mercure/caddy \
+#    --with github.com/dunglas/vulcain \
+#    --with github.com/dunglas/vulcain/caddy
+#
+#FROM caddy:${CADDY_VERSION} AS api_platform_caddy
+#
+#WORKDIR /srv/api
+#
+#COPY --from=api_platform_caddy_builder /usr/bin/caddy /usr/bin/caddy
+#COPY --from=api_platform_php /srv/api/public public/
+#COPY docker/caddy/Caddyfile /etc/caddy/Caddyfile
